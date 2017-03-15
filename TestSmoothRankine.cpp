@@ -6,8 +6,6 @@
 #include "SmoothRankine.h"
 #include "SmoothRankineEigen.h"
 
-#include <iostream>
-
 //! @brief compares the smooth rankine norm values (Eigen vs own implementation)
 //! @param rStress vector of test stresses
 void CheckValues(const std::vector<StressVector>& rStresses)
