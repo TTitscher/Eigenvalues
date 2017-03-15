@@ -29,6 +29,6 @@ message(STATUS "BOOST_INCLUDE_DIRS = ${BOOST_INCLUDE_DIRS}")
 #test Environment
 include(CTest)
 
-add_executable(TestEigenvalue TestEigenvalue.cpp)
-target_link_libraries(TestEigenvalue ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
-add_test(Test::Eigenvalue TestEigenvalue --log_level=message)
+add_executable(TestSmoothRankine TestSmoothRankine.cpp)
+target_link_libraries(TestSmoothRankine ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+add_test(Test::SmoothRankine TestSmoothRankine --log_level=message)
