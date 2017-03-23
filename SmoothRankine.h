@@ -1,10 +1,8 @@
 #pragma once
 #include "Typedefs.h"
-#include <iostream>
 
 
 const double pi = 3.1415926535897932384626433832795028841971;
-const double eps = std::numeric_limits<double>::epsilon();
 
 class SmoothRankine
 {
@@ -19,11 +17,19 @@ public:
         return smoothRankine;
     }
 
-    static Derivative GetDerivative(const StressVector& rStress)
+    static Derivative GetDerivative(const StressVector& rStress, double rDelta)
     {
 //        Derivative smoothRankineDerivative = rStress; // TODO
-        YieldAndDerivative yad = CalculateYieldFunctionAndDerivative(rStress);
-        Derivative smoothRankineDerivative = yad.deriv;
+        StressVector stressShift;
+        stressShift << 1, 1, 1, 1, 1, 1;
+        stressShift = rStress - stressShift*rDelta;
+
+        YieldAndDerivative yadOriginal = CalculateYieldFunctionAndDerivative(rStress);
+        YieldAndDerivative yadShift = CalculateYieldFunctionAndDerivative(stressShift);
+
+        Derivative smoothRankineDerivative = yadOriginal.deriv;
+        Derivative smoothRankineDerivativeShift = yadShift.deriv;
+        smoothRankineDerivative = (smoothRankineDerivative - smoothRankineDerivativeShift) / rDelta;
         return smoothRankineDerivative;
     }
 
@@ -38,6 +44,8 @@ private:
     //!
     static YieldAndDerivative CalculateYieldFunctionAndDerivative(const StressVector& rStress)
     {
+        YieldAndDerivative results;
+
         StressVector stressPermuted;
         stressPermuted[0] = rStress[0];
         stressPermuted[1] = rStress[1];
@@ -66,13 +74,13 @@ private:
 
         //-------------------- eigenvalues --------------------
         Eigen::Vector3d eigenValues;
-        eigenValues[0] = -2*P*cos(beta)-a/3;
+        eigenValues[0] = -2*P*std::cos(beta)-a/3;
         eigenValues[0] = (greaterThan(eigenValues[0], 0.) ? eigenValues[0] : 0);
 
-        eigenValues[1] = 2*P*cos(beta+pi/3) - a/3;
+        eigenValues[1] = 2*P*std::cos(beta+pi/3) - a/3;
         eigenValues[1] = (greaterThan(eigenValues[1], 0.) ? eigenValues[1] : 0);
 
-        eigenValues[2] = 2*P*cos(beta-pi/3) - a/3;
+        eigenValues[2] = 2*P*std::cos(beta-pi/3) - a/3;
         eigenValues[2] = (greaterThan(eigenValues[2], 0.) ? eigenValues[2] : 0);
 
         double f = 0.;
@@ -94,6 +102,8 @@ private:
         {
             f = std::sqrt(std::pow(a,2) - 2*b);
         }
+
+        results.yieldFunction = f;
 
 
         //-------------------- derivative --------------------
@@ -126,11 +136,27 @@ private:
                 2*(stressPermuted[2]*stressPermuted[3]-stressPermuted[4]*stressPermuted[5]), 2*(stressPermuted[0]*stressPermuted[4] - stressPermuted[3]*stressPermuted[5]),
                 2*(stressPermuted[1]*stressPermuted[5] - stressPermuted[3]*stressPermuted[4]);
 
+
         Dp_Ds = -2*a/9*Da_Ds + 1/3*Db_Ds;
         Dq_Ds = (std::pow(a,2)/9 - b/6)*Da_Ds - a/6*Db_Ds + 1/2*Dc_Ds;
 
         DP_Ds = 1/(2*std::sqrt(-p))*Dp_Ds;
         DP_Ds = (q < 0 ? (-1)*DP_Ds : DP_Ds);
+
+//        std::cout << "a = " << a << std::endl;
+//        std::cout << "b = " << b << std::endl;
+//        std::cout << "c = " << c << std::endl;
+//        std::cout << "q = " << q << std::endl;
+//        std::cout << "p = " << p << std::endl;
+//        std::cout << "D = " << D << std::endl;
+//        std::cout << "P = " << P << std::endl;
+//        std::cout << "beta = " << beta << std::endl;
+
+//        std::cout << "\n\nsig_1 = " << eigenValues[0] << std::endl;
+//        std::cout << "sig_2 = " << eigenValues[1] << std::endl;
+//        std::cout << "sig_3 = " << eigenValues[2] << std::endl;
+
+//        std::cout << "\n\nf = " << f << std::endl;
 
         //D < 0 ?
         if (lessThan(D, 0.))
@@ -175,36 +201,45 @@ private:
                 Df_Ds = Df_Da*Da_Ds + Df_Db*Db_Ds;
             }
         }
+
+        results.deriv = Df_Ds;
+
+        return results;
     }
 
 
     template<typename T>
     static bool equals(T num_1, T num_2)
     {
+        double eps = std::numeric_limits<T>::epsilon();
         return (std::abs(num_1 - num_2) < eps);
     }
 
     template<typename T>
     static bool greaterThan(T num_1, T num_2)
     {
-        return (std::abs(num_1 - eps) > num_2);
+        double eps = std::numeric_limits<T>::epsilon();
+        return ((num_1 - eps) > num_2);
     }
 
     template<typename T>
     static bool lessThan(T num_1, T num_2)
     {
+        double eps = std::numeric_limits<T>::epsilon();
         return (greaterThan(num_2, num_1));
     }
 
     template<typename T>
     static bool greaterOrEqual(T num_1, T num_2)
     {
+        double eps = std::numeric_limits<T>::epsilon();
         return (equals(num_1, num_2) || greaterThan(num_1, num_2));
     }
 
     template<typename T>
     static bool lessOrEqual(T num_1, T num_2)
     {
+        double eps = std::numeric_limits<T>::epsilon();
         return (equals(num_1, num_2) || lessThan(num_1, num_2));
     }
 };
